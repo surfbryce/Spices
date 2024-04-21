@@ -1,7 +1,7 @@
 // Standard imports
 import { parseArgs } from "jsr:@std/cli@0.223.0"
 import { exists } from "jsr:@std/fs@0.223.0"
-import { join, extname, resolve, fromFileUrl } from "jsr:@std/path@0.223.0"
+import { join, extname, fromFileUrl } from "jsr:@std/path@0.223.0"
 
 // TUI Imports
 import { tty, colors } from "jsr:@codemonument/cliffy@1.0.0-rc.3/ansi"
@@ -191,7 +191,15 @@ export default async function() {
 		console.log(colors.bgRed.rgb24("  Applying Extension...  ", 0x161616))
 
 		// Grab our template
-		const autoUpdateTemplate = await Deno.readTextFile(resolve(fromFileUrl(import.meta.url), "../AutoUpdate_Test.mjs"))
+		const url = new URL("./AutoUpdate_Test.mjs", import.meta.url)
+		const autoUpdateTemplate = await (
+			(url.protocol === "file:")
+			? Deno.readTextFile(fromFileUrl(url))
+			: (
+				fetch(url.href)
+				.then(response => response.text())
+			)
+		)
 
 		// Now create our new file with the placeholder port updated to the actual port 
 		await Deno.writeTextFile(
