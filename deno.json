@@ -1,0 +1,19 @@
+{
+	"name": "@socali/spices",
+	"version": "1.0.0",
+	"tasks": {},
+	"compilerOptions": {
+		"lib": [
+			"ESNext",
+			"DOM",
+			"DOM.iterable",
+			"deno.ns"
+		]
+	},
+	"exports": {
+		"./Build/Bundle": "./Build/Bundle.ts",
+		"./Debug/Test": "./Debug/Test.ts",
+		"./Debug/StoreLocally": "./Debug/StoreLocally.ts",
+		"./Spicetify/Terminal": "./Spicetify/Terminal.ts"
+	}
+}
