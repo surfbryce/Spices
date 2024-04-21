@@ -191,7 +191,7 @@ export default async function() {
 		console.log(colors.bgRed.rgb24("  Applying Extension...  ", 0x161616))
 
 		// Grab our template
-		const url = new URL("./AutoUpdate_Test.mjs", import.meta.url)
+		const url = new URL("../AutoUpdate/Templates/AutoUpdate_Test.mjs", import.meta.url)
 		const autoUpdateTemplate = await (
 			(url.protocol === "file:")
 			? Deno.readTextFile(fromFileUrl(url))

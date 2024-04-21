@@ -65,13 +65,13 @@ const UpdateVersion = (toVersion) => {
 
 				// Handle notifiying that we updated
 				if (fromVersion !== undefined) {
-					if (module.UpdateNotification.Type === "Notification") {
+					if (module.UpdateNotice.Type === "Notification") {
 						Spicetify.Snackbar.enqueueSnackbar(
 							Spicetify.React.createElement(
 								"div",
 								{
 									dangerouslySetInnerHTML: {
-										__html: `<h3>${module.UpdateNotification.Name} Updated!</h3>
+										__html: `<h3>${module.UpdateNotice.Name} Updated!</h3>
 										<span style = 'opacity: 0.75;'>Version ${fromVersion} -> ${toVersion}</span>`.trim()
 									}
 								}
