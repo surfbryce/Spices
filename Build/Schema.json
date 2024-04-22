@@ -10,7 +10,7 @@
 			"readOnly": true
 		},
 		"Name": {
-			"description": "The name used for Locally applying the build with Spicetify",
+			"description": "The base file name used for Hosted Release builds, OR the internal Spicetify file name when storing Locally or when using a Test build",
 			"type": "string",
 			"pattern": "^[\\w_-]+$",
 			"readOnly": true
@@ -22,7 +22,7 @@
 			"readOnly": true
 		},
 		"ReleaseLocation": {
-			"description": "The Web Location of the built Release, used by the Auto-Updater to determine how retrieval is done",
+			"description": "Configuration determining WHERE the Auto-Updater will get the release from",
 			"type": "object",
 			"oneOf": [
 				{
