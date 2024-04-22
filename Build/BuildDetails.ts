@@ -16,6 +16,6 @@ export const SpicetifyEntryPoint: string = `${BuildName}.mjs`
 export const SpicetifyEntryPointPath: string = join(await GetSpicetifyExtensionsDirectory(), SpicetifyEntryPoint)
 
 export const BuildVersion: string = buildJSON.version
-if (BuildVersion.match(/^[\d]+\.[\d+]\.[\d+]$/) === null) {
+if (BuildVersion.match(/^\d+\.\d+\.\d+$/) === null) {
 	throw new Error(`Invalid Build-Version (${BuildVersion})`)
 }
