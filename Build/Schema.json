@@ -10,7 +10,7 @@
 			"readOnly": true
 		},
 		"Name": {
-			"description": "The base file name used for Hosted Release builds, OR the internal Spicetify file name when storing Locally or when using a Test build",
+			"description": "The base file name used for Hosted Release builds, also the internal Spicetify file name when using a Test build or storing Locally",
 			"type": "string",
 			"pattern": "^[\\w_-]+$",
 			"readOnly": true

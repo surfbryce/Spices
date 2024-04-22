@@ -1,6 +1,6 @@
 {
 	"name": "@socali/spices",
-	"version": "1.4.1",
+	"version": "1.4.2",
 	"tasks": {},
 	"compilerOptions": {
 		"lib": [
