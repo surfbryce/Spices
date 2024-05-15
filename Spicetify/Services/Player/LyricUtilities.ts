@@ -6,10 +6,10 @@ import type {
 export type { ProviderLyrics }
 
 // Language Modules
-import { franc } from "npm:franc"
-import Kuroshiro from "npm:@sglkc/kuroshiro"
+import { franc } from "npm:franc@^6.2.0"
+import Kuroshiro from "npm:@sglkc/kuroshiro@^1.0.1"
 import * as KuromojiAnalyzer from "./KuromojiAnalyzer.ts"
-import pinyin from "npm:pinyin"
+import pinyin from "npm:pinyin@^4.0.0-alpha.0"
 import Aromanize from "./Aromanize.ts"
 
 // Lyrics Types

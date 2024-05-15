@@ -1,7 +1,7 @@
 // Type Imports
 // @deno-types='https://esm.sh/v96/@types/three@0.144.0/index.d.ts'
-import type KuromojiType from "npm:@types/kuromoji"
-import type { Tokenizer, IpadicFeatures } from "npm:@types/kuromoji"
+import type KuromojiType from "npm:@types/kuromoji@^0.1.3"
+import type { Tokenizer, IpadicFeatures } from "npm:@types/kuromoji@^0.1.3"
 
 // Language Module
 import ImportedKuromoji from "./Kuromoji.js"
