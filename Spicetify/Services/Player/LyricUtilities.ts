@@ -2,7 +2,7 @@
 import type {
 	Lyrics as ProviderLyrics,
 	TextMetadata
-} from "jsr:@socali/beautiful-lyrics/Types/Lyrics"
+} from "jsr:@socali/beautiful-lyrics@^1.0.0/Types/Lyrics"
 export type { ProviderLyrics }
 
 // Language Modules
