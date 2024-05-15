@@ -11,6 +11,7 @@
 		]
 	},
 	"exports": {
+		"./Build/Details": "./Build/BuildDetails.ts",
 		"./Build/Bundle": "./Build/Bundle.ts",
 		"./Build/Release": "./Build/Release.ts",
 		"./AutoUpdate/UpdateNotice": "./AutoUpdate/UpdateNotice.ts",
