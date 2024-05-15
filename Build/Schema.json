@@ -61,9 +61,14 @@
 							"description": "The URL to the Host directory",
 							"type": "string",
 							"readOnly": true
+						},
+						"VersionCheckUrl": {
+							"description": "The URL to check for the latest version",
+							"type": "string",
+							"readOnly": true
 						}
 					},
-					"required": ["Type", "Url"],
+					"required": ["Type", "Url", "VersionCheckUrl"],
 					"additionalProperties": false
 				}
 			],

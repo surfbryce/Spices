@@ -19,3 +19,16 @@ export const BuildVersion: string = buildJSON.Version
 if (BuildVersion.match(/^\d+\.\d+\.\d+$/) === null) {
 	throw new Error(`Invalid Build-Version (${BuildVersion})`)
 }
+
+export const BuildReleaseLocation: (
+	{
+		Type: "GitHub",
+		User: string,
+		Repository: string
+	}
+	| {
+		Type: "Hosted",
+		Url: string,
+		VersionCheckUrl: string
+	}
+) = buildJSON.ReleaseLocation

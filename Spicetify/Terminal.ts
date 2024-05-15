@@ -36,6 +36,13 @@ export const ToggleExtension = (fileName: string, apply: boolean): Promise<void>
 	.then()
 )
 
+export const RemoveExtension = (path: string): Promise<void> => (
+	ToggleExtension(path, false)
+	.then(() => Apply(true))
+	.then(GetSpicetifyExtensionsDirectory)
+	.then((extensionsDirectory) => Deno.remove(join(extensionsDirectory, path)))
+)
+
 // Run Functions
 export const Apply = (withDevtools?: true): Promise<void> => (
 	new Deno.Command(

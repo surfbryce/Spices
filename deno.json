@@ -1,6 +1,6 @@
 {
 	"name": "@socali/spices",
-	"version": "1.4.3",
+	"version": "2.0.0",
 	"tasks": {},
 	"compilerOptions": {
 		"lib": [
@@ -12,9 +12,23 @@
 	},
 	"exports": {
 		"./Build/Bundle": "./Build/Bundle.ts",
+		"./Build/Release": "./Build/Release.ts",
 		"./AutoUpdate/UpdateNotice": "./AutoUpdate/UpdateNotice.ts",
+
 		"./Debug/Test": "./Debug/Test.ts",
 		"./Debug/StoreLocally": "./Debug/StoreLocally.ts",
-		"./Spicetify/Terminal": "./Spicetify/Terminal.ts"
+
+		"./Spicetify/Terminal": "./Spicetify/Terminal.ts",
+		"./Spicetify/Services/Session": "./Spicetify/Services/Session.ts",
+		"./Spicetify/Services/Cache": "./Spicetify/Services/Cache.ts",
+		"./Spicetify/Services/Player": "./Spicetify/Services/Player/mod.ts",
+		"./Spicetify/Services/Library": "./Spicetify/Services/Library.ts",
+
+		"./Spicetify/Types/API/TrackInformation": "./Spicetify/Types/API/TrackInformation.ts",
+
+		"./Spicetify/Types/App/PlaylistItemMetadata": "./Spicetify/Types/App/PlaylistItemMetadata.ts",
+		"./Spicetify/Types/App/PlaylistMetadata": "./Spicetify/Types/App/PlaylistMetadata.ts",
+		"./Spicetify/Types/App/Spicetify": "./Spicetify/Types/App/Spicetify.ts",
+		"./Spicetify/Types/App/TrackMetadata": "./Spicetify/Types/App/TrackMetadata.ts"
 	}
 }

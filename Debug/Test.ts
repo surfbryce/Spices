@@ -11,14 +11,14 @@ import { keypress, type KeyPressEvent } from "jsr:@codemonument/cliffy@1.0.0-rc.
 import { Application, Status } from "jsr:@oak/oak@16.0.0"
 
 // Spicetify Imports
-import { GetSpicetifyExtensionsDirectory, ToggleExtension, Apply } from "../Spicetify/Terminal.ts"
+import { ToggleExtension, Apply, RemoveExtension } from "../Spicetify/Terminal.ts"
 
 // Build Imports
 import { SpicetifyEntryPoint, SpicetifyEntryPointPath } from "../Build/BuildDetails.ts"
 import Bundle from "../Build/Bundle.ts"
 
 // Web-Module Imports
-import { Signal } from "jsr:@socali/modules@^1.0.0/Signal"
+import { Signal } from "jsr:@socali/modules@^4.4.1/Signal"
 
 // Return our function which is really just used to handle custom port definition
 export default async function() {
@@ -50,7 +50,7 @@ export default async function() {
 	}
 
 	// Handle bundling
-	let UpdateVersion: (dontDisplayPrompt?: true) => Promise<void>
+	let UpdateVersion: (dontDisplayPrompt?: true) => Promise<unknown>
 	{
 		// TUI Functions
 		const DisplayPort = () => {
@@ -88,8 +88,15 @@ export default async function() {
 						VersionIdentifier: testVersion.toString()
 					}
 				)
-				.then(
-					_ => {
+				.catch(
+					(error) => {
+						console.log("")
+						console.log(colors.bgRed.rgb24("  Failed to Bundle...  ", 0x161616))
+						console.log(error)
+					}
+				)
+				.finally(
+					() => {
 						// Show the uesr the new state
 						DisplayDoneStatus()
 	
@@ -257,9 +264,7 @@ export default async function() {
 						)
 
 						// Remove the extension
-						await ToggleExtension(SpicetifyEntryPoint, false)
-						await Apply(true)
-						await Deno.remove(join(await GetSpicetifyExtensionsDirectory(), SpicetifyEntryPoint))
+						await RemoveExtension(SpicetifyEntryPoint)
 					}
 
 					// Now display that we are closing the port/exiting
