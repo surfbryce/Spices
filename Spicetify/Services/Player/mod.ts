@@ -68,7 +68,7 @@ export const LoopModeChanged: Event = LoopModeChangedSignal.GetEvent()
 export const IsLikedChanged: Event = IsLikedChangedSignal.GetEvent()
 
 // Store our song state
-export let Song: (SongMetadata | undefined)
+export let Song: (SongMetadata | undefined) = undefined
 export let IsLiked = false
 export let HasIsLikedLoaded = false
 
@@ -123,7 +123,7 @@ export type LoadedSongDetails = {
 
 	Raw: TrackInformation;
 }
-export let SongDetails: (LoadedSongDetails | undefined)
+export let SongDetails: (LoadedSongDetails | undefined) = undefined
 export let HaveSongDetailsLoaded: boolean = false
 
 const TrackInformationStore = GetExpireStore<TrackInformation>(
@@ -254,7 +254,7 @@ const TransformedLyricsStore = GetExpireStore<TransformedLyrics | false>(
 	true
 )
 
-export let SongLyrics: (TransformedLyrics | undefined)
+export let SongLyrics: (TransformedLyrics | undefined) = undefined
 export let HaveSongLyricsLoaded: boolean = false
 const LoadSongLyrics = () => {
 	// Remove our prior lyric state

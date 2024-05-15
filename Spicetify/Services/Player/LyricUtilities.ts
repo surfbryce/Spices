@@ -2,7 +2,7 @@
 import type {
 	Lyrics as ProviderLyrics,
 	TextMetadata
-} from "../../../../Beautiful Lyrics/Shared/Lyrics.ts"
+} from "jsr:@socali/beautiful-lyrics/Types/Lyrics"
 export type { ProviderLyrics }
 
 // Language Modules
