@@ -9,7 +9,7 @@ export type { ProviderLyrics }
 import { franc } from "npm:franc@^6.2.0"
 import Kuroshiro from "npm:@sglkc/kuroshiro@^1.0.1"
 import * as KuromojiAnalyzer from "./KuromojiAnalyzer.ts"
-import { pinyin } from "npm:pinyin@^4.0.0-alpha.0/lib/pinyin-web.js"
+import pinyin from "jsr:@socali/pinyin@1.0.0"
 import Aromanize from "./Aromanize.ts"
 
 // Lyrics Types
