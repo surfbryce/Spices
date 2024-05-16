@@ -9,7 +9,7 @@ export type { ProviderLyrics }
 import { franc } from "npm:franc@^6.2.0"
 import Kuroshiro from "npm:@sglkc/kuroshiro@^1.0.1"
 import * as KuromojiAnalyzer from "./KuromojiAnalyzer.ts"
-import pinyin from "jsr:@socali/pinyin@1.0.0"
+import pinyin from "jsr:@socali/pinyin@2.0.0"
 import Aromanize from "./Aromanize.ts"
 
 // Lyrics Types
@@ -61,16 +61,17 @@ const GenerateChineseRomanization = <L extends TextMetadata>(
 	primaryLanguage: string
 ): Promise<RomanizedLanguage | void> => {
 	if ((primaryLanguage === "cmn") || ChineseTextText.test(lyricMetadata.Text)) {
-		lyricMetadata.RomanizedText = (
+		return (
 			pinyin(
 				lyricMetadata.Text,
 				{
 					segment: false,
 					group: true
 				}
-			).join("-")
+			)
+			.then(result => lyricMetadata.RomanizedText = result.join("-"))
+			.then(() => "Chinese")
 		)
-		return Promise.resolve("Chinese")
 	} else {
 		return Promise.resolve()
 	}

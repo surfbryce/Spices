@@ -13,6 +13,7 @@
       "jsr:@socali/modules@4.1.2": "jsr:@socali/modules@4.1.2",
       "jsr:@socali/modules@4.3.0": "jsr:@socali/modules@4.3.0",
       "jsr:@socali/modules@4.4.0": "jsr:@socali/modules@4.4.0",
+      "jsr:@socali/pinyin@2.0.0": "jsr:@socali/pinyin@2.0.0",
       "jsr:@std/assert@0.222": "jsr:@std/assert@0.222.1",
       "jsr:@std/assert@0.223": "jsr:@std/assert@0.223.0",
       "jsr:@std/assert@^0.213.1": "jsr:@std/assert@0.213.1",
@@ -69,7 +70,8 @@
       "npm:postcss": "npm:postcss@8.4.38",
       "npm:postcss@8.4.38": "npm:postcss@8.4.38",
       "npm:sass": "npm:sass@1.70.0",
-      "npm:sass@1.75.0": "npm:sass@1.75.0"
+      "npm:sass@1.75.0": "npm:sass@1.75.0",
+      "npm:segmentit@^2.0.3": "npm:segmentit@2.0.3"
     },
     "jsr": {
       "@codemonument/cliffy@1.0.0-rc.3": {
@@ -126,6 +128,12 @@
       },
       "@socali/modules@4.4.0": {
         "integrity": "c0297777117750e0e73b3a2c5f4f40e318b229ef6733ba769c0b5a9fd6762626"
+      },
+      "@socali/pinyin@2.0.0": {
+        "integrity": "bd648f6f27fb520adf988a392f27323e9596aecba302bf5ff3a1831eb8d67d79",
+        "dependencies": [
+          "npm:segmentit@^2.0.3"
+        ]
       },
       "@std/assert@0.213.1": {
         "integrity": "24c28178b30c8e0782c18e8e94ea72b16282207569cdd10ffb9d1d26f2edebfe"
