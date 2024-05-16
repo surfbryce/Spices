@@ -15,6 +15,7 @@
       "jsr:@socali/modules@4.4.0": "jsr:@socali/modules@4.4.0",
       "jsr:@socali/pinyin@2.0.0": "jsr:@socali/pinyin@2.0.0",
       "jsr:@socali/pinyin@3.0.0": "jsr:@socali/pinyin@3.0.0",
+      "jsr:@socali/pinyin@4.0.0": "jsr:@socali/pinyin@4.0.0",
       "jsr:@std/assert@0.222": "jsr:@std/assert@0.222.1",
       "jsr:@std/assert@0.223": "jsr:@std/assert@0.223.0",
       "jsr:@std/assert@^0.213.1": "jsr:@std/assert@0.213.1",
@@ -141,6 +142,9 @@
         "dependencies": [
           "npm:segmentit@^2.0.3"
         ]
+      },
+      "@socali/pinyin@4.0.0": {
+        "integrity": "bf4f743daf6750365d935b1439e409035b39af2745a69e1969e1106f0ec6195c"
       },
       "@std/assert@0.213.1": {
         "integrity": "24c28178b30c8e0782c18e8e94ea72b16282207569cdd10ffb9d1d26f2edebfe"
