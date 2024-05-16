@@ -76,7 +76,7 @@ export default async (bundleConfiguration: BundleConfiguration = {}): Promise<un
 	const plugins: esbuild.Plugin[] = []
 	const rawCSS: string[] = []
 	{
-		plugins.push(...denoPlugins())
+		plugins.push(...denoPlugins({ configPath: resolve(Deno.cwd(), "./deno.json") }))
 
 		const postCSSProcessor = PostCSS(
 			[
@@ -182,6 +182,7 @@ export default async (bundleConfiguration: BundleConfiguration = {}): Promise<un
 
 				plugins,
 	
+				platform: "browser",
 				format: "esm",
 				bundle: true,
 				sourcemap: ((buildDirectory === undefined) ? false : "linked"),
