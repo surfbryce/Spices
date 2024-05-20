@@ -5,6 +5,7 @@ import type TrackMetadata from "../../Types/App/TrackMetadata.ts"
 // Web-Modules
 import { Signal, type Event } from "jsr:@socali/modules@^4.4.1/Signal"
 import { Maid } from "jsr:@socali/modules@^4.4.1/Maid"
+import { Defer, Timeout } from "jsr:@socali/modules@^4.4.1/Scheduler"
 
 // Spicetify Services
 import {
@@ -20,7 +21,6 @@ import {
 	TransformProviderLyrics,
 	type ProviderLyrics, type TransformedLyrics, type RomanizedLanguage
 } from "./LyricUtilities.ts"
-import { Defer } from "jsr:@socali/modules@^4.4.1/Scheduler";
 
 // Re-export some useful types
 export type { RomanizedLanguage, TransformedLyrics }
@@ -486,51 +486,78 @@ OnSpotifyReady.then(
 
 		// Handle timestamp updates
 		{	
-			// Now create our callback
-			let lastUpdatedAt = performance.now(), lastUpdatedPlaybackTimestamp: number
-			const Update = () => {
-				(SpotifyPlatform.PlayerAPI._contextPlayer.getPositionState({}) as Promise<{position: bigint}>)
-				.then(
-					(state) => {
-						// Make sure we have an update
-						if (lastUpdatedAt === undefined) {
-							lastUpdatedAt = performance.now()
-							return PlayerMaid.Give(Defer(Update), "Timestep")
-						}
-
-						// Determine our frame variables
-						const updatedAt = performance.now()
-						const deltaTime = ((updatedAt - lastUpdatedAt) / 1000)
-
-						// Determine if we can update our timestamp at all
-						if (Song !== undefined) {
-							// Grab our state
-							const position = Number(state.position)
-
-							// Determine what our new-timestamp is
-							let newTimestamp: (number | undefined), fireDeltaTime = deltaTime
-							if (IsPlaying) {
-								newTimestamp = (position / 1000)
-							} else if (lastUpdatedPlaybackTimestamp !== position) {
-								newTimestamp = (position / 1000), fireDeltaTime = 0
-							}
-
-							// Determine if we should even fire
-							if (newTimestamp !== undefined) {
-								lastUpdatedPlaybackTimestamp = position, Timestamp = newTimestamp
-								TimeSteppedSignal.Fire(fireDeltaTime, ((fireDeltaTime === 0) || undefined))
-							}
-						}
-
-						// Update our monitor state
-						lastUpdatedAt = updatedAt
-
-						// Schedule us for another update
-						PlayerMaid.Give(Defer(Update), "Timestep")
-					}
+			// Handle position syncing
+			let syncedPosition: ({ StartedSyncAt: number; Position: number; }) | undefined
+			const RequestPositionSync = () => {
+				const startedAt = performance.now()
+				return (
+					(SpotifyPlatform.PlayerAPI._contextPlayer.getPositionState({}) as Promise<{position: bigint}>)
+					.then(({ position }) => syncedPosition = { StartedSyncAt: startedAt, Position: Number(position) })
+					.then(() => PlayerMaid.Give(Timeout((1 / 30), RequestPositionSync), "TimestampPositionSync"))
 				)
 			}
-			Update()
+
+			// Handle frame updating
+			let lastUpdatedAt = performance.now()
+			const Update = () => {
+				// Make sure we have an update
+				if (lastUpdatedAt === undefined) {
+					lastUpdatedAt = performance.now()
+					return PlayerMaid.Give(Defer(Update), "Timestep")
+				}
+
+				// Determine our frame variables
+				const updatedAt = performance.now()
+				const deltaTime = ((updatedAt - lastUpdatedAt) / 1000)
+
+				// Determine if we can update our timestamp at all
+				if (Song !== undefined) {
+					// Store our state for determination later
+					let newTimestamp: (number | undefined), fireDeltaTime = deltaTime
+
+					// Determine if we have a synced timestamp or not
+					const syncedTimestamp = (
+						(syncedPosition === undefined) ? undefined
+						: (
+							(syncedPosition.Position / 1000)
+							+ ((updatedAt - syncedPosition.StartedSyncAt) / 1000)
+						)
+					)
+					syncedPosition = undefined
+
+					// Determine how we update our newTimestamp
+					if (IsPlaying) {
+						if (
+							(syncedTimestamp === undefined)
+							|| (Math.abs(syncedTimestamp - Timestamp) < 0.075)
+						) {
+							newTimestamp = (Timestamp + deltaTime), fireDeltaTime = deltaTime
+						} else {
+							newTimestamp = syncedTimestamp
+						}
+					} else if (
+						(syncedTimestamp !== undefined)
+						&& (Math.abs(syncedTimestamp - Timestamp) > 0.01)
+					) {
+						newTimestamp = syncedTimestamp, fireDeltaTime = 0
+					}
+
+					// Determine if we should even fire
+					if (newTimestamp !== undefined) {
+						Timestamp = newTimestamp
+						TimeSteppedSignal.Fire(fireDeltaTime, ((fireDeltaTime === 0) || undefined))
+					}
+				}
+
+				// Update our monitor state
+				lastUpdatedAt = updatedAt
+
+				// Schedule us for another update
+				PlayerMaid.Give(Defer(Update), "Timestep")
+			}
+			
+			// Finally, sync our position THEN update
+			RequestPositionSync().then(Update)
 		}
 	}
 )
