@@ -37,6 +37,7 @@ export let SpotifyHistory: {
 export let SpotifyPlaybar: typeof Spotify.Playbar
 // deno-lint-ignore no-explicit-any
 export let SpotifySnackbar: any
+export let SpotifyInternalFetch: typeof SpicetifyTypes.CosmosAsync
 
 // Handle Spotify loaded process
 let MakeSpotifyReady: () => void
@@ -51,6 +52,7 @@ export const OnSpotifyReady = SpotifyReadyPromise
 		SpotifyPlaybar = Spotify.Playbar
 		// deno-lint-ignore no-explicit-any
 		SpotifySnackbar = (Spotify as any).Snackbar
+		SpotifyInternalFetch = Spotify.CosmosAsync
 
 		// Determine if we have all our services
 		if (
@@ -59,6 +61,7 @@ export const OnSpotifyReady = SpotifyReadyPromise
 			|| (SpotifyHistory === undefined)
 			|| (SpotifyPlaybar === undefined)
 			|| (SpotifySnackbar === undefined)
+			|| (SpotifyFetch === undefined)
 		) {
 			GlobalMaid.Give(Defer(CheckForServices))
 		} else {
@@ -69,13 +72,17 @@ export const OnSpotifyReady = SpotifyReadyPromise
 }
 
 // Handle token-fetching
-type TokenProviderResponse = {accessToken: string, accessTokenExpirationTimestampMs: number}
+type TokenProviderResponse = {
+	accessToken: string,
+	expiresAtTime: number,
+	tokenType: "Bearer"
+}
 let tokenProviderResponse: (TokenProviderResponse | undefined)
 let accessTokenPromise: Promise<string> | undefined
 export const GetSpotifyAccessToken = (): Promise<string> => {
 	// Determine if we're close to refreshing (meaning we should wait until then)
 	if (tokenProviderResponse !== undefined) {
-		const timeUntilRefresh = ((tokenProviderResponse.accessTokenExpirationTimestampMs - Date.now()) / 1000)
+		const timeUntilRefresh = ((tokenProviderResponse.expiresAtTime - Date.now()) / 1000)
 		if (timeUntilRefresh <= 2) {
 			tokenProviderResponse = undefined
 			accessTokenPromise = (
@@ -98,7 +105,7 @@ export const GetSpotifyAccessToken = (): Promise<string> => {
 
 	// Otherwise, fetch a new access-token
 	accessTokenPromise = (
-		SpotifyPlatform.AuthorizationAPI._tokenProvider()
+		SpotifyInternalFetch.get("sp://oauth/v2/token")
 		.then(
 			(result: TokenProviderResponse) => {
 				tokenProviderResponse = result, accessTokenPromise = Promise.resolve(result.accessToken)
