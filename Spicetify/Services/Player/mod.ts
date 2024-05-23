@@ -280,8 +280,8 @@ const LoadSongLyrics = () => {
 							GetSpotifyAccessToken()
 							.then(
 								accessToken => fetch(
-									`https://beautiful-lyrics.socalifornian.live/lyrics/${encodeURIComponent(songAtUpdate.Id)}`,
-									// `http://localhost:8787/lyrics/${encodeURIComponent(songAtUpdate.Id)}`,
+									// `https://beautiful-lyrics.socalifornian.live/lyrics/${encodeURIComponent(songAtUpdate.Id)}`,
+									`http://localhost:8787/lyrics/${encodeURIComponent(songAtUpdate.Id)}`,
 									{
 										method: "GET",
 										headers: {
@@ -487,13 +487,66 @@ OnSpotifyReady.then(
 		// Handle timestamp updates
 		{	
 			// Handle position syncing
-			let syncedPosition: ({ StartedSyncAt: number; Position: number; }) | undefined
+			type SyncedPostiion = ({ StartedSyncAt?: number; Position: number; })
+			let syncedPosition: (SyncedPostiion | undefined)
+
+			const syncTimings = [0.05, 0.1, 0.15, 0.75]
+			let canSyncNonLocalTimestamp = (IsPlaying ? syncTimings.length : 0)
+			SongChangedSignal.Connect(() => canSyncNonLocalTimestamp = syncTimings.length)
+			IsPlayingChangedSignal.Connect(() => canSyncNonLocalTimestamp = (IsPlaying ? syncTimings.length : 0))
+
 			const RequestPositionSync = () => {
 				const startedAt = performance.now()
+				const isLocallyPlaying = SpotifyPlatform.PlaybackAPI._isLocal
 				return (
-					(SpotifyPlatform.PlayerAPI._contextPlayer.getPositionState({}) as Promise<{position: bigint}>)
-					.then(({ position }) => syncedPosition = { StartedSyncAt: startedAt, Position: Number(position) })
-					.then(() => PlayerMaid.Give(Timeout((1 / 30), RequestPositionSync), "TimestampPositionSync"))
+					/*
+						IsLocal determines whether or not we are playing on the current device
+						OR if we are playing on a different device (device switching).
+
+						For local playback, we can use the Clients C++ Transport to get the current position.
+						Otherwise, we have to request for a timestamp resync to get the current position.
+					*/
+					isLocallyPlaying
+					? (
+						(SpotifyPlatform.PlayerAPI._contextPlayer.getPositionState({}) as Promise<{position: bigint}>)
+						.then(({ position }) => ({ StartedSyncAt: startedAt, Position: Number(position) }))
+					)
+					: (
+						(
+							(canSyncNonLocalTimestamp > 0) ? SpotifyPlatform.PlayerAPI._contextPlayer.resume({})
+							: Promise.resolve()
+						)
+						.then(
+							() => {
+								canSyncNonLocalTimestamp = Math.max(0, (canSyncNonLocalTimestamp - 1))
+								return (
+									IsPlaying ? {
+										StartedSyncAt: startedAt,
+										Position: (
+											SpotifyPlatform.PlayerAPI._state.positionAsOfTimestamp
+											+ (Date.now() - SpotifyPlatform.PlayerAPI._state.timestamp)
+										)
+									}
+									: { Position: SpotifyPlatform.PlayerAPI._state.positionAsOfTimestamp }
+								)
+							}
+						)
+					)
+				)
+				.then((position: SyncedPostiion) => syncedPosition = position )
+				.then(
+					() => PlayerMaid.Give(
+						Timeout(
+							(
+								isLocallyPlaying ? (1 / 30)
+								: (
+									(canSyncNonLocalTimestamp === 0) ? (1 / 30)
+									: syncTimings[syncTimings.length - canSyncNonLocalTimestamp]
+								)
+							), RequestPositionSync
+						),
+						"TimestampPositionSync"
+					)
 				)
 			}
 
@@ -520,7 +573,10 @@ OnSpotifyReady.then(
 						(syncedPosition === undefined) ? undefined
 						: (
 							(syncedPosition.Position / 1000)
-							+ ((updatedAt - syncedPosition.StartedSyncAt) / 1000)
+							+ (
+								(syncedPosition.StartedSyncAt === undefined) ? 0
+								: ((updatedAt - syncedPosition.StartedSyncAt) / 1000)
+							)
 						)
 					)
 					syncedPosition = undefined
@@ -537,7 +593,7 @@ OnSpotifyReady.then(
 						}
 					} else if (
 						(syncedTimestamp !== undefined)
-						&& (Math.abs(syncedTimestamp - Timestamp) > 0.01)
+						&& (Math.abs(syncedTimestamp - Timestamp) > 0.05)
 					) {
 						newTimestamp = syncedTimestamp, fireDeltaTime = 0
 					}
