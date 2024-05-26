@@ -98,7 +98,7 @@ export const GetSpotifyAccessToken = (): Promise<string> => {
 
 	// Otherwise, fetch a new access-token
 	accessTokenPromise = (
-		SpotifyPlatform.AuthorizationAPI._tokenProvider()
+		SpotifyPlatform.AuthorizationAPI._tokenProvider.getToken()
 		.then(
 			(result: TokenProviderResponse) => {
 				tokenProviderResponse = result, accessTokenPromise = Promise.resolve(result.accessToken)
