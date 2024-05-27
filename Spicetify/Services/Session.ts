@@ -38,6 +38,7 @@ export let SpotifyPlaybar: typeof Spotify.Playbar
 // deno-lint-ignore no-explicit-any
 export let SpotifySnackbar: any
 export let SpotifyInternalFetch: typeof SpicetifyTypes.CosmosAsync
+export let SpotifyURI: typeof SpicetifyTypes.URI
 
 // Handle Spotify loaded process
 let MakeSpotifyReady: () => void
@@ -53,6 +54,7 @@ export const OnSpotifyReady = SpotifyReadyPromise
 		// deno-lint-ignore no-explicit-any
 		SpotifySnackbar = (Spotify as any).Snackbar
 		SpotifyInternalFetch = Spotify.CosmosAsync
+		SpotifyURI = Spotify.URI
 
 		// Determine if we have all our services
 		if (
@@ -62,10 +64,11 @@ export const OnSpotifyReady = SpotifyReadyPromise
 			|| (SpotifyPlaybar === undefined)
 			|| (SpotifySnackbar === undefined)
 			|| (SpotifyFetch === undefined)
+			|| (SpotifyURI === undefined)
 		) {
 			GlobalMaid.Give(Defer(CheckForServices))
 		} else {
-			MakeSpotifyReady()
+			GlobalMaid.Give(Defer(MakeSpotifyReady))
 		}
 	}
 	CheckForServices()
