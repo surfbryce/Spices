@@ -1,5 +1,5 @@
 // Spotify Types
-import type { TrackInformation, ArtistDetails, AlbumType } from "../../Types/API/TrackInformation.ts"
+import type { TrackInformationResponse, TrackInformation, TrackReleaseDate } from "../../Types/API/InternalTrackInformation.ts"
 import type TrackMetadata from "../../Types/App/TrackMetadata.ts"
 
 // Web-Modules
@@ -10,9 +10,9 @@ import { Defer, Timeout } from "jsr:@socali/modules@^4.4.1/Scheduler"
 // Spicetify Services
 import {
 	GlobalMaid,
-	OnSpotifyReady,
-	SpotifyPlayer, SpotifyPlatform,
-	SpotifyFetch, GetSpotifyAccessToken
+	OnSpotifyReady, Spotify,
+	SpotifyPlayer, SpotifyPlatform, SpotifyURI,
+	GetSpotifyAccessToken
 } from "../Session.ts"
 import { GetExpireStore } from '../Cache.ts'
 
@@ -25,40 +25,26 @@ import {
 // Re-export some useful types
 export type { RomanizedLanguage, TransformedLyrics }
 
-// Types
-export type CoverArtMetadata = {
-	Large: string;
-	Big: string;
-	Default: string;
-	Small: string;
-}
-export type SongMetadata = {
-	IsLocal: boolean;
-	Uri: string;
-	Id: string;
-	Duration: number;
-	CoverArt: CoverArtMetadata;
-}
-
 // Create our maid for the Player
 const PlayerMaid = GlobalMaid.Give(new Maid())
 
 // Create our signals/expose events
 type TimeStepped = (deltaTime: number, skipped?: true) => void
 const [
-	SongChangedSignal,
+	SongChangedSignal, SongContextChangedSignal,
 	SongDetailsLoadedSignal, SongLyricsLoadedSignal,
 	IsPlayingChangedSignal, TimeSteppedSignal,
 	IsShufflingChangedSignal, LoopModeChangedSignal,
 	IsLikedChangedSignal
 ] = PlayerMaid.GiveItems(
-	new Signal(),
+	new Signal(), new Signal(),
 	new Signal(), new Signal(),
 	new Signal(), new Signal<TimeStepped>(),
 	new Signal(), new Signal(),
 	new Signal()
 )
 export const SongChanged: Event = SongChangedSignal.GetEvent()
+export const SongContextChanged: Event = SongContextChangedSignal.GetEvent()
 export const SongDetailsLoaded: Event = SongDetailsLoadedSignal.GetEvent()
 export const SongLyricsLoaded: Event = SongLyricsLoadedSignal.GetEvent()
 export const IsPlayingChanged: Event = IsPlayingChangedSignal.GetEvent()
@@ -68,7 +54,55 @@ export const LoopModeChanged: Event = LoopModeChangedSignal.GetEvent()
 export const IsLikedChanged: Event = IsLikedChangedSignal.GetEvent()
 
 // Store our song state
+export type LocalSongMetadata = {
+	IsLocal: true;
+
+	Uri: string;
+	Duration: number;
+	CoverArt?: string;
+}
+export type StreamedSongMetadata = {
+	IsLocal: false;
+
+	Uri: string;
+	Id: string;
+	InternalId: string;
+	Duration: number;
+	CoverArt: {
+		Large: string;
+		Big: string;
+		Default: string;
+		Small: string;
+	};
+}
+export type SongMetadata = (StreamedSongMetadata | LocalSongMetadata)
 export let Song: (SongMetadata | undefined) = undefined
+
+export type SongContextDetails = (
+	{
+		Uri: string;
+		Description: string;
+		CoverArt?: string;
+	}
+	& (
+		{
+			Type: "Album",
+			Id: string
+		}
+		| {
+			Type: "Playlist",
+			Id: string
+		}
+		| {
+			Type: "LocalFiles"
+		}
+		| {
+			Type: "Other"
+		}
+	)
+)
+export let SongContext: (SongContextDetails | undefined) = undefined
+
 export let IsLiked = false
 export let HasIsLikedLoaded = false
 
@@ -109,20 +143,34 @@ export const GetTimestampString = (): string => {
 }
 
 // Handle our Details
-export type LoadedSongDetails = {
+export type LocalSongDetails = {
+	IsLocal: true;
+
+	Name: string;
+	Album: string;
+	Artists?: string[];
+}
+type StreamedArtistsDetails = {
+	InternalId: string;
+	Id: string;
+	Name: string;
+}
+export type StreamedSongDetails = {
+	IsLocal: false;
+
 	ISRC: string;
 	Name: string;
-	Artists: ArtistDetails[];
-	ReleaseDate: string;
+	Artists: StreamedArtistsDetails[];
 	Album: {
+		InternalId: string;
 		Id: string;
-		Type: AlbumType;
-		Artists: ArtistDetails[];
-		ReleaseDate: string;
+		Artists: StreamedArtistsDetails[];
+		ReleaseDate: TrackReleaseDate;
 	};
 
 	Raw: TrackInformation;
 }
+export type LoadedSongDetails = (LocalSongDetails | StreamedSongDetails)
 export let SongDetails: (LoadedSongDetails | undefined) = undefined
 export let HaveSongDetailsLoaded: boolean = false
 
@@ -131,7 +179,8 @@ const TrackInformationStore = GetExpireStore<TrackInformation>(
 	{
 		Duration: 2,
 		Unit: "Weeks"
-	}
+	},
+	true
 )
 const SongNameFilters = [
 	/\s*(?:\-|\/)\s*(?:(?:Stereo|Mono)\s*)?Remastered(?:\s*\d+)?/,
@@ -153,18 +202,11 @@ const LoadSongDetails = () => {
 	// If we're a local song, as of now, there will be no details stored
 	if (songAtUpdate.IsLocal) {
 		SongDetails = {
-			ISRC: "",
-			Name: "",
-			Artists: [],
-			ReleaseDate: "",
-			Album: {
-				Id: "",
-				Type: "single",
-				Artists: [],
-				ReleaseDate: ""
-			},
+			IsLocal: true,
 
-			Raw: undefined as never
+			Name: SpotifyPlayer.data.item.name,
+			Album: SpotifyPlayer.data.item.album.name,
+			Artists: SpotifyPlayer.data.item.artists?.map(artist => artist.name)
 		}, HaveSongDetailsLoaded = true
 		SongDetailsLoadedSignal.Fire()
 
@@ -177,21 +219,33 @@ const LoadSongDetails = () => {
 		.then(
 			trackInformation => {
 				if (trackInformation === undefined) {
+					// Create our base-build
+					const requsestBuilder = (
+						SpotifyPlatform.RequestBuilder.build()
+						.withHost("https://spclient.wg.spotify.com/metadata/4")
+						.withPath(`/track/${songAtUpdate.InternalId}`)
+						.withEndpointIdentifier(`/track/${songAtUpdate.InternalId}`)
+					)
+
+					// Mark our request-builder to default to existing promise
+					requsestBuilder.UseExistingPromise = true
+
+					// Now send our request
 					return (
-						SpotifyFetch(`https://api.spotify.com/v1/tracks/${songAtUpdate.Id}`)
+						// SpotifyFetch(`https://api.spotify.com/v1/tracks/${songAtUpdate.Id}`)
+						(requsestBuilder.send() as Promise<TrackInformationResponse>)
 						// Uncaught on purpose - it should rarely ever fail
 						.catch(error => {console.warn(error); throw error})
 						.then(
 							response => {
-								if ((response.status < 200) || (response.status > 299)) {
+								if (response.ok === false) {
 									throw `Failed to load Track (${songAtUpdate.Id}) Information`
 								}
-
-								return response.json()
+								return response.body
 							}
 						)
 						.then(
-							(trackInformation: TrackInformation) => {
+							(trackInformation) => {
 								TrackInformationStore.SetItem(songAtUpdate.Id, trackInformation)
 								return trackInformation
 							}
@@ -217,15 +271,32 @@ const LoadSongDetails = () => {
 
 				// Update our details
 				SongDetails = {
-					ISRC: trackInformation.external_ids.isrc,
+					IsLocal: false,
+
+					ISRC: trackInformation.external_id.find(entry => entry.type === "isrc")!.id,
 					Name: transformedName,
-					Artists: trackInformation.artists,
-					ReleaseDate: trackInformation.album.release_date.substring(0, 4),
+					Artists: trackInformation.artist.map(
+						artist => (
+							{
+								InternalId: artist.gid,
+								Id: SpotifyURI.hexToId(artist.gid),
+								Name: artist.name
+							}
+						)
+					),
 					Album: {
-						Id: trackInformation.album.id,
-						Type: trackInformation.album.album_type,
-						Artists: trackInformation.album.artists,
-						ReleaseDate: trackInformation.album.release_date.substring(0, 4)
+						InternalId: trackInformation.album.gid,
+						Id: SpotifyURI.hexToId(trackInformation.album.gid),
+						Artists: trackInformation.album.artist.map(
+							artist => (
+								{
+									InternalId: artist.gid,
+									Id: SpotifyURI.hexToId(artist.gid),
+									Name: artist.name
+								}
+							)
+						),
+						ReleaseDate: trackInformation.album.date
 					},
 
 					Raw: trackInformation
@@ -374,6 +445,67 @@ const LoadSongLyrics = () => {
 // Wait for Spotify to be ready
 OnSpotifyReady.then(
 	() => {
+		/*
+			We override the RequestBuilder so we can store
+			Send promises for track information requests.
+
+			This is so we don't pollute the console with faulty errors/warnings
+			about duplicate requests being sent around the same time.
+		*/
+		{
+			// Reset any pending requests
+			SpotifyPlatform.RequestBuilder.resetPendingRequests()
+
+			// Create our override
+			const originalBuildMethod = SpotifyPlatform.RequestBuilder.build
+
+			const trackPromises = new Map<string, Promise<unknown>>()
+			SpotifyPlatform.RequestBuilder.build = (...buildArguments: unknown[]) => {
+				const builder = originalBuildMethod.call(SpotifyPlatform.RequestBuilder, ...buildArguments)
+				
+				const originalOnAfterSendMethod = builder.onAfterSend
+				let removeTrackPromiseId: (string | undefined)
+				builder.onAfterSend = (...onAfterSendArguments: unknown[]) => {
+					if (removeTrackPromiseId !== undefined) {
+						trackPromises.delete(removeTrackPromiseId)
+					}
+					return originalOnAfterSendMethod.call(builder, ...onAfterSendArguments)
+				}
+
+				const originalSendMethod = builder.send
+				builder.send = (...sendArguments: unknown[]) => {
+					const isTrackInformationRequest = (
+						(builder.host === "https://spclient.wg.spotify.com/metadata/4")
+						&& builder.path.startsWith("/track/")
+						&& builder.endpointIdentifier?.startsWith("/track/")
+					)
+
+					if (builder.UseExistingPromise && isTrackInformationRequest) {
+						const existingPromise = trackPromises.get(`${builder.host}${builder.path}`)
+						if (existingPromise !== undefined) {
+							return existingPromise
+						}
+					}
+
+					const sendPromise = originalSendMethod.call(builder, ...sendArguments)
+					if (isTrackInformationRequest) {
+						const trackPromiseId = `${builder.host}${builder.path}`
+						trackPromises.set(trackPromiseId, sendPromise)
+						removeTrackPromiseId = trackPromiseId
+					}
+
+					return sendPromise
+				}
+
+				return builder
+			}
+
+			PlayerMaid.Give(
+				() => SpotifyPlatform.RequestBuilder.build = originalBuildMethod,
+				"RequestBuilderOverride"
+			)
+		}
+
 		// Hande loop/shuffle updates
 		{
 			const OnUpdate = () => {
@@ -404,13 +536,22 @@ OnSpotifyReady.then(
 
 		// Handle song updates
 		{
-			const spicetifyTrackId = /^spotify:track:([\w\d]+)$/
-			const spicetifyLocalTrackId = /^spotify:local:(.+)$/
-
 			const OnSongChange = () => {
 				// Wait until we have our SpotifyPlayer data
-				if (SpotifyPlayer.data === undefined) {
+				if (SpotifyPlayer.data?.context === undefined) {
 					return PlayerMaid.Give(Defer(OnSongChange), "SongChangeUpdate")
+				} else if (SpotifyPlayer.data === null) {
+					if (Song !== undefined) {
+						Song = undefined
+						SongChangedSignal.Fire()
+					}
+
+					if (SongContext !== undefined) {
+						SongContext = undefined
+						SongContextChangedSignal.Fire()
+					}
+
+					return
 				}
 
 				// Make sure that this is a Song and not any other type of track
@@ -424,16 +565,21 @@ OnSpotifyReady.then(
 					// Create our song-information
 					const metadata = track.metadata as unknown as TrackMetadata
 					const isLocal = (metadata.is_local === "true")
+					const uri = SpotifyURI.from(track.uri)
 					Song = Object.freeze(
-						{
-							IsLocal: isLocal,
+						isLocal ? {
+							IsLocal: true,
+
 							Uri: track.uri,
-							Id: (
-								track.uri.match(
-									isLocal ? spicetifyLocalTrackId
-									: spicetifyTrackId
-								)![1]
-							),
+							Duration: (SpotifyPlayer.data.duration / 1000),
+							CoverArt: SpotifyPlayer.data.item.images?.[0]?.url
+						}
+						: {
+							IsLocal: false,
+
+							Uri: track.uri,
+							Id: uri!.id!,
+							InternalId: SpotifyURI.idToHex(uri!.id!),
 							Duration: (SpotifyPlayer.data.duration / 1000),
 							CoverArt: {
 								Large: metadata.image_xlarge_url,
@@ -452,6 +598,54 @@ OnSpotifyReady.then(
 
 				// Fire our events
 				SongChangedSignal.Fire()
+
+				// Determine if our context changed
+				if ((SpotifyPlayer.data.hasContext === false) && (SongContext !== undefined)) {
+					SongContext = undefined
+					SongContextChangedSignal.Fire()
+				} else if (
+					(SongContext === undefined)
+					|| (SongContext.Uri !== SpotifyPlayer.data.context.uri)
+				) {
+					const contextMetadata = SpotifyPlayer.data.context.metadata as unknown as {
+						context_description: string;
+						image_url: string;
+					}
+					const baseSongContext = {
+						Uri: SpotifyPlayer.data.context.uri,
+						CoverArt: ((contextMetadata.image_url === "") ? undefined : contextMetadata.image_url),
+						Description: contextMetadata.context_description
+					}
+
+					if (baseSongContext.Uri === "spotify:internal:local-files") {
+						SongContext = {
+							Type: "LocalFiles",
+							...baseSongContext
+						}
+					} else {
+						const uri = SpotifyURI.from(SpotifyPlayer.data.context.uri)
+						if (uri?.type?.startsWith("playlist")) {
+							SongContext = {
+								Type: "Playlist",
+								Id: uri.id!,
+								...baseSongContext
+							}
+						} else if (uri?.type === "album") {
+							SongContext = {
+								Type: "Album",
+								Id: uri.id!,
+								...baseSongContext
+							}
+						} else {
+							SongContext = {
+								Type: "Other",
+								...baseSongContext
+							}
+						}
+					}
+
+					SongContextChangedSignal.Fire()
+				}
 			}
 			OnSongChange()
 			SpotifyPlayer.addEventListener("songchange", OnSongChange)
