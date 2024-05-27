@@ -63,7 +63,7 @@ export const OnSpotifyReady = SpotifyReadyPromise
 			|| (SpotifyHistory === undefined)
 			|| (SpotifyPlaybar === undefined)
 			|| (SpotifySnackbar === undefined)
-			|| (SpotifyFetch === undefined)
+			|| (SpotifyInternalFetch === undefined)
 			|| (SpotifyURI === undefined)
 		) {
 			GlobalMaid.Give(Defer(CheckForServices))
