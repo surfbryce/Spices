@@ -351,8 +351,8 @@ const LoadSongLyrics = () => {
 							GetSpotifyAccessToken()
 							.then(
 								accessToken => fetch(
-									// `https://beautiful-lyrics.socalifornian.live/lyrics/${encodeURIComponent(songAtUpdate.Id)}`,
-									`http://localhost:8787/lyrics/${encodeURIComponent(songAtUpdate.Id)}`,
+									`https://beautiful-lyrics.socalifornian.live/lyrics/${encodeURIComponent(songAtUpdate.Id)}`,
+									// `http://localhost:8787/lyrics/${encodeURIComponent(songAtUpdate.Id)}`,
 									{
 										method: "GET",
 										headers: {
