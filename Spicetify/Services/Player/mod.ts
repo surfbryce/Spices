@@ -10,7 +10,7 @@ import { Defer, Timeout } from "jsr:@socali/modules@^4.4.1/Scheduler"
 // Spicetify Services
 import {
 	GlobalMaid,
-	OnSpotifyReady, Spotify,
+	OnSpotifyReady,
 	SpotifyPlayer, SpotifyPlatform, SpotifyURI,
 	GetSpotifyAccessToken
 } from "../Session.ts"
