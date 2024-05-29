@@ -175,7 +175,7 @@ export let SongDetails: (LoadedSongDetails | undefined) = undefined
 export let HaveSongDetailsLoaded: boolean = false
 
 const TrackInformationStore = GetExpireStore<TrackInformation>(
-	"Player_TrackInformation", 1,
+	"Player_TrackInformation", 2,
 	{
 		Duration: 2,
 		Unit: "Weeks"
@@ -309,7 +309,7 @@ const LoadSongDetails = () => {
 
 // Handle our Lyrics
 const ProviderLyricsStore = GetExpireStore<ProviderLyrics | false>(
-	"Player_ProviderLyrics", 1,
+	"Player_ProviderLyrics", 2,
 	{
 		Duration: 1,
 		Unit: "Months"
@@ -317,7 +317,7 @@ const ProviderLyricsStore = GetExpireStore<ProviderLyrics | false>(
 	true
 )
 const TransformedLyricsStore = GetExpireStore<TransformedLyrics | false>(
-	"Player_TransformedLyrics", 1,
+	"Player_TransformedLyrics", 2,
 	{
 		Duration: 1,
 		Unit: "Months"
