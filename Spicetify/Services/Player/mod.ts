@@ -11,7 +11,7 @@ import { Defer, Timeout } from "jsr:@socali/modules@^4.4.1/Scheduler"
 import {
 	GlobalMaid,
 	OnSpotifyReady,
-	SpotifyPlayer, SpotifyPlatform, SpotifyURI,
+	SpotifyPlayer, SpotifyPlatform, SpotifyURI, SpotifyRequestBuilder,
 	GetSpotifyAccessToken
 } from "../Session.ts"
 import { GetExpireStore } from '../Cache.ts'
@@ -221,7 +221,7 @@ const LoadSongDetails = () => {
 				if (trackInformation === undefined) {
 					// Create our base-build
 					const requsestBuilder = (
-						SpotifyPlatform.RequestBuilder.build()
+						SpotifyRequestBuilder.build()
 						.withHost("https://spclient.wg.spotify.com/metadata/4")
 						.withPath(`/track/${songAtUpdate.InternalId}`)
 						.withEndpointIdentifier(`/track/${songAtUpdate.InternalId}`)
@@ -454,14 +454,14 @@ OnSpotifyReady.then(
 		*/
 		{
 			// Reset any pending requests
-			SpotifyPlatform.RequestBuilder.resetPendingRequests()
+			SpotifyRequestBuilder.resetPendingRequests()
 
 			// Create our override
-			const originalBuildMethod = SpotifyPlatform.RequestBuilder.build
+			const originalBuildMethod = SpotifyRequestBuilder.build
 
 			const trackPromises = new Map<string, Promise<unknown>>()
-			SpotifyPlatform.RequestBuilder.build = (...buildArguments: unknown[]) => {
-				const builder = originalBuildMethod.call(SpotifyPlatform.RequestBuilder, ...buildArguments)
+			SpotifyRequestBuilder.build = (...buildArguments: unknown[]) => {
+				const builder = originalBuildMethod.call(SpotifyRequestBuilder, ...buildArguments)
 				
 				const originalOnAfterSendMethod = builder.onAfterSend
 				let removeTrackPromiseId: (string | undefined)
@@ -501,7 +501,7 @@ OnSpotifyReady.then(
 			}
 
 			PlayerMaid.Give(
-				() => SpotifyPlatform.RequestBuilder.build = originalBuildMethod,
+				() => SpotifyRequestBuilder.build = originalBuildMethod,
 				"RequestBuilderOverride"
 			)
 		}

@@ -39,6 +39,7 @@ export let SpotifyPlaybar: typeof Spotify.Playbar
 export let SpotifySnackbar: any
 export let SpotifyInternalFetch: typeof SpicetifyTypes.CosmosAsync
 export let SpotifyURI: typeof SpicetifyTypes.URI
+export let SpotifyRequestBuilder: typeof SpicetifyTypes.Platform.RequestBuilder
 
 // Handle Spotify loaded process
 let MakeSpotifyReady: () => void
@@ -67,9 +68,66 @@ export const OnSpotifyReady = SpotifyReadyPromise
 			|| (SpotifyURI === undefined)
 		) {
 			GlobalMaid.Give(Defer(CheckForServices))
-		} else {
-			GlobalMaid.Give(Defer(MakeSpotifyReady))
+			return
 		}
+
+		if (SpotifyRequestBuilder === undefined) {
+			// If everything else loaded, our Platform.RequestBuilder should be as well
+			SpotifyRequestBuilder = SpotifyPlatform.RequestBuilder
+
+			// Couldn't find it directly so we'll have to search for it (older versions of Spotify primarily)
+			if (SpotifyRequestBuilder === undefined) {
+				const stack: Record<string, unknown>[] = [Spotify]
+				const seenInStack = new Set()
+				while (stack.length > 0) {
+					const searchIn = stack.pop()!
+					for (
+						const key
+						of [
+							...Object.getOwnPropertyNames(searchIn),
+							...Object.getOwnPropertyNames(Object.getPrototypeOf(searchIn) || [])
+						]
+					) {
+						// It's possible that indexing into the object will throw an error
+						try {
+							const value = searchIn[key]
+							if (seenInStack.has(value)) {
+								continue
+							} else if ((value === null) || (value === undefined)) {
+								continue
+							} else if (typeof value === "object") {
+								const prototype = Object.getPrototypeOf(value)
+								if (
+									(typeof(prototype.resetPendingRequests) === "function")
+									&& (typeof(prototype.build) === "function")
+									&& (typeof((value as Record<string, unknown>).pendingRequests) === "object")
+								) {
+									SpotifyRequestBuilder = value
+									break
+								}
+			
+								stack.push(value as Record<string, unknown>)
+							}
+				
+							seenInStack.add(value)
+						} catch (_) { /* Do nothing */ }
+					}
+
+					if (SpotifyRequestBuilder !== undefined) {
+						break
+					}
+				}
+			}
+
+			// Failed to find the SpotifyRequestBuilder
+			if (SpotifyRequestBuilder === undefined) {
+				console.warn("Failed to find SpotifyRequestBuilder")
+				GlobalMaid.Give(Defer(CheckForServices))
+				return
+			}
+		}
+
+		GlobalMaid.Give(Defer(MakeSpotifyReady))
 	}
 	CheckForServices()
 }
@@ -113,6 +171,25 @@ export const GetSpotifyAccessToken = (): Promise<string> => {
 			(result: TokenProviderResponse) => {
 				tokenProviderResponse = result, accessTokenPromise = Promise.resolve(result.accessToken)
 				return GetSpotifyAccessToken() // Re-run this to make sure we don't need to refresh again
+			}
+		)
+		.catch(
+			(error: Error) => {
+				// Means this method of fetching the token is not valid in the used version of Spotify
+				if (error.message.includes("Resolver not found")) {
+					if (SpotifyPlatform.Session === undefined) {
+						console.warn("Failed to find SpotifyPlatform.Session for fetching token")
+					} else {
+						tokenProviderResponse = {
+							accessToken: SpotifyPlatform.Session.accessToken,
+							expiresAtTime: SpotifyPlatform.Session.accessTokenExpirationTimestampMs,
+							tokenType: "Bearer"
+						}
+						accessTokenPromise = Promise.resolve(tokenProviderResponse.accessToken)
+					}
+				}
+
+				return GetSpotifyAccessToken() // Retry fetching the token
 			}
 		)
 	)
