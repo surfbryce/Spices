@@ -220,7 +220,7 @@ const LoadSongDetails = () => {
 			trackInformation => {
 				if (trackInformation === undefined) {
 					// Create our base-build
-					const requsestBuilder = (
+					const requestBuilder = (
 						SpotifyRequestBuilder.build()
 						.withHost("https://spclient.wg.spotify.com/metadata/4")
 						.withPath(`/track/${songAtUpdate.InternalId}`)
@@ -228,12 +228,12 @@ const LoadSongDetails = () => {
 					)
 
 					// Mark our request-builder to default to existing promise
-					requsestBuilder.UseExistingPromise = true
+					requestBuilder.UseExistingPromise = true
 
 					// Now send our request
 					return (
 						// SpotifyFetch(`https://api.spotify.com/v1/tracks/${songAtUpdate.Id}`)
-						(requsestBuilder.send() as Promise<TrackInformationResponse>)
+						(requestBuilder.send() as Promise<TrackInformationResponse>)
 						// Uncaught on purpose - it should rarely ever fail
 						.catch(error => {console.warn(error); throw error})
 						.then(
