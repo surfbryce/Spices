@@ -54,15 +54,27 @@ export const LoopModeChanged: Event = LoopModeChangedSignal.GetEvent()
 export const IsLikedChanged: Event = IsLikedChangedSignal.GetEvent()
 
 // Store our song state
+export type DJMetadata = {
+	Type: "DJ";
+
+	Uri: string;
+	Action: string;
+	CoverArt: {
+		Large: string;
+		Big: string;
+		Default: string;
+		Small: string;
+	};
+}
 export type LocalSongMetadata = {
-	IsLocal: true;
+	Type: "Local";
 
 	Uri: string;
 	Duration: number;
 	CoverArt?: string;
 }
 export type StreamedSongMetadata = {
-	IsLocal: false;
+	Type: "Streamed";
 
 	Uri: string;
 	Id: string;
@@ -75,7 +87,7 @@ export type StreamedSongMetadata = {
 		Small: string;
 	};
 }
-export type SongMetadata = (StreamedSongMetadata | LocalSongMetadata)
+export type SongMetadata = (StreamedSongMetadata | LocalSongMetadata | DJMetadata)
 export let Song: (SongMetadata | undefined) = undefined
 
 export type SongContextDetails = (
@@ -109,6 +121,10 @@ export let HasIsLikedLoaded = false
 // Static Song Helpers
 export const SetIsLiked = (isLiked: boolean): (false | void) => ((isLiked !== IsLiked) && SpotifyPlayer.setHeart(isLiked))
 export const GetDurationString = (): string => {
+	if (Song?.Type === "DJ") {
+		throw new Error("Cannot get duration of a DJ track")
+	}
+
 	const duration = (Song?.Duration ?? 0)
 	const minutes = Math.floor(duration / 60)
 	const seconds = Math.floor(duration % 60)
@@ -136,6 +152,10 @@ export const SetIsPlaying = (isPlaying: boolean): (false | void) => (
 )
 export const SeekTo = (timestamp: number): void => SpotifyPlayer.seek(timestamp * 1000)
 export const GetTimestampString = (): string => {
+	if (Song?.Type === "DJ") {
+		throw new Error("Cannot get Timestamp of a DJ track")
+	}
+
 	const duration = (Song?.Duration ?? 0)
 	const minutes = Math.floor(Timestamp / 60)
 	const seconds = Math.floor(Timestamp % 60)
@@ -193,14 +213,14 @@ const LoadSongDetails = () => {
 
 	// If we have no song then we have no details
 	const songAtUpdate = Song
-	if (songAtUpdate === undefined) {
+	if ((songAtUpdate === undefined) || (songAtUpdate.Type === "DJ")) {
 		HaveSongDetailsLoaded = true
 		SongDetailsLoadedSignal.Fire()
 		return
 	}
 
 	// If we're a local song, as of now, there will be no details stored
-	if (songAtUpdate.IsLocal) {
+	if (songAtUpdate.Type === "Local") {
 		SongDetails = {
 			IsLocal: true,
 
@@ -333,7 +353,7 @@ const LoadSongLyrics = () => {
 
 	// Check if we can even possibly have lyrics
 	const songAtUpdate = Song
-	if ((songAtUpdate === undefined) || songAtUpdate.IsLocal) {
+	if ((songAtUpdate === undefined) || (songAtUpdate.Type !== "Streamed")) {
 		HaveSongLyricsLoaded = true
 		SongLyricsLoadedSignal.Fire()
 		return
@@ -556,7 +576,9 @@ OnSpotifyReady.then(
 
 				// Make sure that this is a Song and not any other type of track
 				const track = SpotifyPlayer.data.item
-				if ((track === undefined) || (track.type !== "track")) {
+				const isASong = (track.type === "track")
+				const isDJ = ((track.type === "unknown") && (track.provider.startsWith("narration")))
+				if ((track === undefined) || ((isASong === false) && (isDJ === false))) {
 					Song = undefined
 				} else {
 					// Set our Timestamp to 0 immediately
@@ -564,18 +586,29 @@ OnSpotifyReady.then(
 
 					// Create our song-information
 					const metadata = track.metadata as unknown as TrackMetadata
-					const isLocal = (metadata.is_local === "true")
 					const uri = SpotifyURI.from(track.uri)
 					Song = Object.freeze(
-						isLocal ? {
-							IsLocal: true,
+						isDJ ? {
+							Type: "DJ",
+
+							Uri: track.uri,
+							Action: track.name,
+							CoverArt: {
+								Large: metadata.image_xlarge_url,
+								Big: metadata.image_large_url,
+								Default: metadata.image_url,
+								Small: metadata.image_small_url
+							}
+						}
+						: (metadata.is_local === "true") ? {
+							Type: "Local",
 
 							Uri: track.uri,
 							Duration: (SpotifyPlayer.data.duration / 1000),
 							CoverArt: SpotifyPlayer.data.item.images?.[0]?.url
 						}
 						: {
-							IsLocal: false,
+							Type: "Streamed",
 
 							Uri: track.uri,
 							Id: uri!.id!,
