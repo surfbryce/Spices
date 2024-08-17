@@ -689,7 +689,7 @@ OnSpotifyReady.then(
 		{
 			const Update = () => {
 				// If we have no data, then wait until we do
-				if (SpotifyPlayer.data === undefined) {
+				if ((SpotifyPlayer.data === undefined) || (SpotifyPlayer.data === null)) {
 					return PlayerMaid.Give(Defer(Update), "PlayingUpdate")
 				}
 
