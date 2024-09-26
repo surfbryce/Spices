@@ -25,7 +25,7 @@ export default async function() {
 	// Validate our options
 	const options = parseArgs<{port: number}>(Deno.args)
 	if (options.port === undefined) {
-		throw new Error("You must specify a port to Test with.")
+		throw new Error("You must specify a port to Test with (--port=X).")
 	}
 
 	// Store our version
