@@ -500,7 +500,7 @@ OnSpotifyReady.then(
 						&& builder.endpointIdentifier?.startsWith("/track/")
 					)
 
-					if (builder.UseExistingPromise && isTrackInformationRequest) {
+					if (isTrackInformationRequest) {
 						const existingPromise = trackPromises.get(`${builder.host}${builder.path}`)
 						if (existingPromise !== undefined) {
 							return existingPromise
@@ -524,34 +524,6 @@ OnSpotifyReady.then(
 				() => SpotifyRequestBuilder.build = originalBuildMethod,
 				"RequestBuilderOverride"
 			)
-		}
-
-		// Hande loop/shuffle updates
-		{
-			const OnUpdate = () => {
-				const newIsLiked = SpotifyPlayer.getHeart()
-				if ((HasIsLikedLoaded === false) || (IsLiked !== newIsLiked)) {
-					IsLiked = newIsLiked
-					HasIsLikedLoaded = true
-					IsLikedChangedSignal.Fire()
-				}
-
-				const newShuffleState = SpotifyPlayer.getShuffle()
-				if (IsShuffling !== newShuffleState) {
-					IsShuffling = newShuffleState
-					IsShufflingChangedSignal.Fire()
-				}
-
-				const loopSetting = SpotifyPlayer.getRepeat()
-				const newLoopMode = ((loopSetting === 0) ? "Off" : (loopSetting === 1) ? "Context" : "Song")
-				if (LoopMode !== newLoopMode) {
-					LoopMode = newLoopMode
-					LoopModeChangedSignal.Fire()
-				}
-			}
-			OnUpdate()
-			SpotifyPlatform.PlayerAPI._events.addListener("update", OnUpdate)
-			PlayerMaid.Give(() => SpotifyPlatform.PlayerAPI._events.removeListener("update", OnUpdate))
 		}
 
 		// Handle song updates
@@ -684,6 +656,34 @@ OnSpotifyReady.then(
 			SpotifyPlayer.addEventListener("songchange", OnSongChange)
 			PlayerMaid.Give(() => SpotifyPlayer.removeEventListener("songchange", OnSongChange))
 		}
+		
+		// Hande loop/shuffle updates
+		{
+			const OnUpdate = () => {
+				const newIsLiked = ((Song === undefined) ? false : SpotifyPlayer.getHeart())
+				if ((HasIsLikedLoaded === false) || (IsLiked !== newIsLiked)) {
+					IsLiked = newIsLiked
+					HasIsLikedLoaded = true
+					IsLikedChangedSignal.Fire()
+				}
+
+				const newShuffleState = SpotifyPlayer.getShuffle()
+				if (IsShuffling !== newShuffleState) {
+					IsShuffling = newShuffleState
+					IsShufflingChangedSignal.Fire()
+				}
+
+				const loopSetting = SpotifyPlayer.getRepeat()
+				const newLoopMode = ((loopSetting === 0) ? "Off" : (loopSetting === 1) ? "Context" : "Song")
+				if (LoopMode !== newLoopMode) {
+					LoopMode = newLoopMode
+					LoopModeChangedSignal.Fire()
+				}
+			}
+			OnUpdate()
+			SpotifyPlatform.PlayerAPI._events.addListener("update", OnUpdate)
+			PlayerMaid.Give(() => SpotifyPlatform.PlayerAPI._events.removeListener("update", OnUpdate))
+		}
 
 		// Handle playing updates
 		{
@@ -712,7 +712,7 @@ OnSpotifyReady.then(
 		}
 
 		// Handle timestamp updates
-		{	
+		{
 			// Handle position syncing
 			type SyncedPostiion = ({ StartedSyncAt?: number; Position: number; })
 			let syncedPosition: (SyncedPostiion | undefined)
