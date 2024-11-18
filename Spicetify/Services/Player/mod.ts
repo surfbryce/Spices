@@ -329,7 +329,7 @@ const LoadSongDetails = () => {
 
 // Handle our Lyrics
 const ProviderLyricsStore = GetExpireStore<ProviderLyrics | false>(
-	"Player_ProviderLyrics", 2,
+	"Player_ProviderLyrics", 3,
 	{
 		Duration: 1,
 		Unit: "Months"
@@ -337,7 +337,7 @@ const ProviderLyricsStore = GetExpireStore<ProviderLyrics | false>(
 	true
 )
 const TransformedLyricsStore = GetExpireStore<TransformedLyrics | false>(
-	"Player_TransformedLyrics", 2,
+	"Player_TransformedLyrics", 3,
 	{
 		Duration: 1,
 		Unit: "Months"
